@@ -1,0 +1,55 @@
+#!/bin/bash
+
+BUGS_DIR="/home/alensav/my-project-git/bugs"
+get_next_id() {
+    local max_id=0
+    for f in "$BUGS_DIR"/*.md; do
+        if [[ -f "$f" ]]; then
+            id_str=$(basename "$f" | cut -d'-' -f1)
+            if [[ "$id_str" =~ ^[0-9]+$ ]]; then
+                # Удаляем ведущие нули: 008 → 8
+                id_num=$(echo "$id_str" | sed 's/^0*//')
+                # Если строка стала пустой (было "000"), ставим 0
+                id_num=${id_num:-0}
+                if (( id_num > max_id )); then
+                    max_id=$id_num
+                fi
+            fi
+        fi
+    done
+    echo $((max_id + 1))
+}
+case "$1" in
+    create)
+        if [ -z "$2" ]; then
+            echo "❌ Использование: $0 create \"Описание\""
+            exit 1
+        fi
+        mkdir -p "$BUGS_DIR"
+        BUG_ID=$(get_next_id)
+        PADDED_ID=$(printf "%03d" $BUG_ID)
+        SAFE_TITLE=$(echo "$2" | tr ' /' '-' | sed 's/[^a-zA-Z0-9а-яА-ЯёЁ-]/_/g; s/--*/-/g; s/-$//; s/^-//')
+        FILENAME="$BUGS_DIR/${PADDED_ID}-${SAFE_TITLE}.md"
+        echo "# Баг #${PADDED_ID}: $2
+
+**Статус:** ⚙️ Открыт
+**Автор:** alensav
+**Дата:** $(date +'%d.%m.%Y %H:%M')
+
+## Описание
+Баг создан на главном компьютере.
+
+## Комментарии
+" > "$FILENAME"
+        echo "✅ Баг создан: $(basename "$FILENAME")"
+        # === TELEGRAM УВЕДОМЛЕНИЕ ===
+        TELEGRAM_BOT_TOKEN="8364800671:AAE7YazwQE0oEJ6RyGhwg30ZDqF9967L9tk"
+        TELEGRAM_CHAT_ID="115815272"
+        curl -s "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage" \
+            -d "chat_id=$TELEGRAM_CHAT_ID" \
+            -d "text=🆕 Баг $PADDED_ID: $2" >/dev/null
+        ;;
+    *)
+        echo "Используйте: $0 create \"описание\""
+        ;;
+esac
