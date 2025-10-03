@@ -89,7 +89,8 @@ END
         cd /home/alensav/my-project-git || exit 1
         git add bugs/
         if ! git diff --quiet --cached; then
-            git commit -m "Sync: $(date +'%Y-%m-%d %H:%M')"
+            #git commit -m "Sync: $(date +'%Y-%m-%d %H:%M')"
+             cd /home/alensav/my-project-git && ./git-sync.sh
             git push origin master
             echo "✅ Отправлено в GitHub"
         else
